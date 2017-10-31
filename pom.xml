@@ -39,7 +39,16 @@
                 <configuration>
                     <instructions>
                         <Main-Class>net.distilledcode.tools.osgi.MetadataDiff</Main-Class>
-                        <Conditional-Package>*</Conditional-Package>
+                        <_conditionalpackage>*</_conditionalpackage>
+                        <_exportcontents>!*</_exportcontents>
+
+                        <!-- remove OSGi headers; this is no real bundle -->
+                        <_removeheaders>
+                            Bundle-*,
+                            Import-Package,
+                            Private-Package,
+                            Require-Capability
+                        </_removeheaders>
                     </instructions>
                 </configuration>
             </plugin>
