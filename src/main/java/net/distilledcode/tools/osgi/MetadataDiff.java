@@ -16,6 +16,7 @@ public class MetadataDiff {
 
     public static void main(String[] args) throws IOException {
         if (args.length != 2) {
+            System.out.println("Usage: java -jar osgi-ds-metatype-diff.jar <oldBundle> <newBundle>");
             System.exit(1);
         }
         String jar1 = args[0];

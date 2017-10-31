@@ -36,6 +36,12 @@
                 <artifactId>maven-bundle-plugin</artifactId>
                 <version>3.3.0</version>
                 <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Main-Class>net.distilledcode.tools.osgi.MetadataDiff</Main-Class>
+                        <Conditional-Package>*</Conditional-Package>
+                    </instructions>
+                </configuration>
             </plugin>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
