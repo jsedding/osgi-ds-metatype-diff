@@ -12,6 +12,6 @@ public class MetadataDiffTest {
     public void testDiff() throws Exception {
         JarFile oakCore1 = getJarFile("oak-core-1.7.8.jar");
         JarFile oakCore2 = getJarFile("oak-core-1.7.9.jar");
-        MetadataDiff.diff(oakCore1, oakCore2);
+        MetadataDiff.diff(oakCore1, oakCore2, true);
     }
 }
