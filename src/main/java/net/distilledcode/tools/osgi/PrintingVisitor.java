@@ -68,8 +68,11 @@ class PrintingVisitor implements Comparison.Visitor {
         if (value.getClass().isArray()) {
             printArray((Object[]) value);
         } else {
-            out.println(value);
+            out.print(value);
         }
+        // append type information
+        out.append(" (").append(value.getClass().getSimpleName()).append(")");
+        out.println();
     }
 
     private void printArray(final Object[] values) {
@@ -88,7 +91,7 @@ class PrintingVisitor implements Comparison.Visitor {
             out.println();
             out.append(indent(sections.size())).append("  ");
         }
-        out.println(']');
+        out.print(']');
     }
 
     private String indent(final int i) {
