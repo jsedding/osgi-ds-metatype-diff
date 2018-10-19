@@ -12,6 +12,7 @@ import java.beans.Introspector;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -137,9 +138,7 @@ public class Comparison {
                 visitValue(visitor, "defaultValue", AD::getDefaultValue, left, right);
                 visitValue(visitor, "min", AD::getMin, left, right);
                 visitValue(visitor, "max", AD::getMax, left, right);
-                
-                // TODO: support i18n here as well
-                visitValue(visitor, "optionLabels", AD::getOptionLabels, left, right);
+                visitLocalizedValues(visitor, "optionLabels", AD::getOptionLabels, left, right);
                 visitValue(visitor, "optionValues", AD::getOptionValues, left, right);
                 visitor.leave(name);
             }
@@ -185,7 +184,11 @@ public class Comparison {
         visitValue(visitor, "field-collection", ReferenceMetadata::getFieldCollectionType, left, right);
         visitor.leave(name);
     }
-    
+
+    private <S> void visitLocalizedValues(final Visitor visitor, String name, final Function<S, String[]> fn, final S left, final S right) {
+        visitValue(visitor, name, localizedValuesOrNull(left, fn, leftMTLocalizationProperties), localizedValuesOrNull(right, fn, rightMTLocalizationProperties));
+    }
+
     private <S> void visitLocalizedValue(final Visitor visitor, String name, final Function<S, String> fn, final S left, final S right) {
         visitValue(visitor, name, localizedValueOrNull(left, fn, leftMTLocalizationProperties), localizedValueOrNull(right, fn, rightMTLocalizationProperties));
     }
@@ -229,14 +232,30 @@ public class Comparison {
         void apply(Visitor visitor, String name, T left, T right);
     }
 
+    private static <S> String[] localizedValuesOrNull(final S object, final Function<S, String[]> fn, Properties properties) {
+        String[] values = nullSafe(fn).apply(object);
+        if (values != null) {
+            List<String> localizedValues = new LinkedList<>();
+            for (String value : values) {
+                localizedValues.add(localizedValue(value, properties));
+            }
+            return localizedValues.toArray(new String[localizedValues.size()]);
+        } else {
+            return null;
+        }
+    }
+    
     private static <S> String localizedValueOrNull(final S object, final Function<S, String> fn, Properties properties) {
         String value = nullSafe(fn).apply(object);
-        if (value != null && value.startsWith("%") && properties != null) {
-            String resolvedValue = properties.getProperty(value.substring(1));
-            return resolvedValue != null ? resolvedValue : value;
-        } else {
-            return value;
+        return localizedValue(value, properties);
+    }
+    
+    private static String localizedValue(String valueToLocalize, Properties properties) {
+        if (valueToLocalize != null && valueToLocalize.startsWith("%") && properties != null) {
+            String resolvedValue = properties.getProperty(valueToLocalize.substring(1));
+            return resolvedValue != null ? resolvedValue : valueToLocalize;
         }
+        return valueToLocalize;
     }
     
     private static <S, T> T valueOrNull(final S object, final Function<S, T> fn) {
