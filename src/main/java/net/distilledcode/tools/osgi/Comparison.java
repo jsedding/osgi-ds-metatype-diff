@@ -93,6 +93,10 @@ public class Comparison {
     @SuppressWarnings("unchecked")
     private static Map<String, OCD> toOCDMap(MetaData metaData) {
         Map<String, OCD> ocds = metaData.getObjectClassDefinitions();
+        // if OCDs without AD children in metatype < 1.3 then ocds = null
+        if (ocds == null) {
+            return Collections.emptyMap();
+        }
         List<Designate> designates = metaData.getDesignates();
         Stream<Designate> stream = designates == null ? Stream.empty() : designates.stream();
         Function<Designate, String> designateStringFunction = d -> d.getObject().getOcdRef();
