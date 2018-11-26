@@ -1,15 +1,10 @@
 package net.distilledcode.tools.osgi;
 
-import org.apache.felix.metatype.Designate;
-import org.apache.felix.metatype.MetaData;
-import org.apache.felix.metatype.MetaDataReader;
-import org.apache.felix.metatype.OCD;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Properties;
 import java.util.function.Function;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -17,6 +12,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+
+import org.apache.felix.metatype.Designate;
+import org.apache.felix.metatype.MetaData;
+import org.apache.felix.metatype.MetaDataReader;
+import org.apache.felix.metatype.OCD;
 
 public class MetaType {
 
@@ -43,6 +43,10 @@ public class MetaType {
                 }, Function.identity()));
     }
 
+    public static Map<String, Properties> readLocalizationProperties(final JarFile jarFile, Map<String, MetaData> metaDataMap) {
+        return  metaDataMap.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, getProperties(jarFile)));
+    }
+
     private static Function<InputStream, MetaData> toMetaData(final MetaDataReader metaDataReader) {
         return inputStream -> {
             try {
@@ -59,6 +63,27 @@ public class MetaType {
         };
     }
 
+    // from the referenced "localization" attribute try to load the properties file
+    private static Function<Map.Entry<String, MetaData>, Properties> getProperties(JarFile jarFile) {
+        return entry -> {
+            Properties properties = new Properties();
+            String path = entry.getValue().getLocalePrefix();
+            if (path != null) {
+                path = path + ".properties";
+                JarEntry jarEntry = jarFile.getJarEntry(path);
+                if (jarEntry == null) {
+                    return properties;
+                }
+                try (InputStream input = jarFile.getInputStream(jarEntry)) {
+                    properties.load(input);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return properties;
+        };
+    }
+   
     private static Stream<JarEntry> findEntries(final JarFile jarFile, final String path, final String extension) {
         return jarFile.stream()
                 .filter(entry -> {

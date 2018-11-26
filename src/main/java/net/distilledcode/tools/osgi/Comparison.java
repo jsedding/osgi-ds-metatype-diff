@@ -12,8 +12,10 @@ import java.beans.Introspector;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -33,13 +35,17 @@ public class Comparison {
     private final ComponentMetadata rightDS;
     private final MetaData leftMT;
     private final MetaData rightMT;
+    private final Properties leftMTLocalizationProperties;
+    private final Properties rightMTLocalizationProperties;
 
-    private Comparison(final String className, final ComponentMetadata leftDS, final ComponentMetadata rightDS, final MetaData leftMT, final MetaData rightMT) {
+    private Comparison(final String className, final ComponentMetadata leftDS, final ComponentMetadata rightDS, final MetaData leftMT, final MetaData rightMT, final Properties leftMTLocalizationProperties, final Properties rightMTLocalizationProperties) {
         this.className = className;
         this.leftDS = leftDS;
         this.rightDS = rightDS;
         this.leftMT = leftMT;
         this.rightMT = rightMT;
+        this.rightMTLocalizationProperties = rightMTLocalizationProperties;
+        this.leftMTLocalizationProperties = leftMTLocalizationProperties;
     }
 
     public static Comparison create(final String className, final MetadataDiff.BundleMetadata left, final MetadataDiff.BundleMetadata right) {
@@ -47,7 +53,9 @@ public class Comparison {
                 left.getDeclarativeServices(className),
                 right.getDeclarativeServices(className),
                 left.getMetaType(className),
-                right.getMetaType(className));
+                right.getMetaType(className),
+                left.getMetaTypeLocalizationProperties(className),
+                right.getMetaTypeLocalizationProperties(className));
     }
 
     public void visit(Visitor visitor) {
@@ -57,7 +65,6 @@ public class Comparison {
         visitor.leave(className);
     }
 
-    @SuppressWarnings("unchecked")
     private void visitMetaType(final Visitor visitor) {
         visitor.enter("MetaType");
         visitMetaTypeAttributes(visitor, leftMT, rightMT);
@@ -67,7 +74,7 @@ public class Comparison {
                 Comparison::visitDesignate);
         visitAsMap(visitor, "ObjectClassDefinitions", leftMT, rightMT,
                 Comparison::toOCDMap,
-                Comparison::visitOCD);
+                visitOCD());
         visitor.leave("MetaType");
 
     }
@@ -105,29 +112,41 @@ public class Comparison {
     }
 
     @SuppressWarnings("unchecked")
-    private static void visitOCD(final Visitor visitor, final String name, final OCD left, final OCD right) {
-        visitor.enter(name);
-        visitValue(visitor, "id", OCD::getID, left, right);
-        visitValue(visitor, "name", OCD::getName, left, right);
-        visitValue(visitor, "description", OCD::getDescription, left, right);
-        visitAsMap(visitor, "Attribute Definitions", left, right,
-                ocd -> (Map<String, AD>)ocd.getAttributeDefinitions(),
-                Comparison::visitAttributeDefinition);
-        visitor.leave(name);
+    private VisitorFunction<OCD> visitOCD() {
+        return new VisitorFunction<OCD>() {
+            @Override
+            public void apply(Visitor visitor, String name, OCD left, OCD right) {
+                visitor.enter(name);
+                // optionally resolve 
+                visitValue(visitor, "id", OCD::getID, left, right);
+                visitLocalizedValue(visitor, "name", OCD::getName, left, right);
+                visitLocalizedValue(visitor, "description", OCD::getDescription, left, right);
+                visitAsMap(visitor, "Attribute Definitions", left, right,
+                        ocd -> (Map<String, AD>)ocd.getAttributeDefinitions(),
+                        visitAttributeDefinition());
+                visitor.leave(name);
+            }
+        };
     }
-    private static void visitAttributeDefinition(final Visitor visitor, final String name, final AD left, final AD right) {
-        visitor.enter(name);
-        visitValue(visitor, "id", AD::getID, left, right);
-        visitValue(visitor, "name", AD::getName, left, right);
-        visitValue(visitor, "description", AD::getDescription, left, right);
-        visitValue(visitor, "type", AD::getType, left, right);
-        visitValue(visitor, "cardinality", AD::getCardinality, left, right);
-        visitValue(visitor, "defaultValue", AD::getDefaultValue, left, right);
-        visitValue(visitor, "min", AD::getMin, left, right);
-        visitValue(visitor, "max", AD::getMax, left, right);
-        visitValue(visitor, "optionLabels", AD::getOptionLabels, left, right);
-        visitValue(visitor, "optionValues", AD::getOptionValues, left, right);
-        visitor.leave(name);
+    
+    private VisitorFunction<AD> visitAttributeDefinition() {
+        return new VisitorFunction<AD>() {
+            @Override
+            public void apply(Visitor visitor, String name, AD left, AD right) {
+                visitor.enter(name);
+                visitValue(visitor, "id", AD::getID, left, right);
+                visitLocalizedValue(visitor, "name", AD::getName, left, right);
+                visitLocalizedValue(visitor, "description", AD::getDescription, left, right);
+                visitValue(visitor, "type", AD::getType, left, right);
+                visitValue(visitor, "cardinality", AD::getCardinality, left, right);
+                visitValue(visitor, "defaultValue", AD::getDefaultValue, left, right);
+                visitValue(visitor, "min", AD::getMin, left, right);
+                visitValue(visitor, "max", AD::getMax, left, right);
+                visitLocalizedValues(visitor, "optionLabels", AD::getOptionLabels, left, right);
+                visitValue(visitor, "optionValues", AD::getOptionValues, left, right);
+                visitor.leave(name);
+            }
+        };
     }
 
     private void visitDS(final Visitor visitor) {
@@ -170,6 +189,14 @@ public class Comparison {
         visitor.leave(name);
     }
 
+    private <S> void visitLocalizedValues(final Visitor visitor, String name, final Function<S, String[]> fn, final S left, final S right) {
+        visitValue(visitor, name, localizedValuesOrNull(left, fn, leftMTLocalizationProperties), localizedValuesOrNull(right, fn, rightMTLocalizationProperties));
+    }
+
+    private <S> void visitLocalizedValue(final Visitor visitor, String name, final Function<S, String> fn, final S left, final S right) {
+        visitValue(visitor, name, localizedValueOrNull(left, fn, leftMTLocalizationProperties), localizedValueOrNull(right, fn, rightMTLocalizationProperties));
+    }
+
     private static <S, T> void visitValue(final Visitor visitor, String name, final Function<S, T> fn, final S left, final S right) {
         visitValue(visitor, name, valueOrNull(left, fn), valueOrNull(right, fn));
     }
@@ -209,6 +236,32 @@ public class Comparison {
         void apply(Visitor visitor, String name, T left, T right);
     }
 
+    private static <S> String[] localizedValuesOrNull(final S object, final Function<S, String[]> fn, Properties properties) {
+        String[] values = nullSafe(fn).apply(object);
+        if (values != null) {
+            List<String> localizedValues = new LinkedList<>();
+            for (String value : values) {
+                localizedValues.add(localizedValue(value, properties));
+            }
+            return localizedValues.toArray(new String[localizedValues.size()]);
+        } else {
+            return null;
+        }
+    }
+    
+    private static <S> String localizedValueOrNull(final S object, final Function<S, String> fn, Properties properties) {
+        String value = nullSafe(fn).apply(object);
+        return localizedValue(value, properties);
+    }
+    
+    private static String localizedValue(String valueToLocalize, Properties properties) {
+        if (valueToLocalize != null && valueToLocalize.startsWith("%") && properties != null) {
+            String resolvedValue = properties.getProperty(valueToLocalize.substring(1));
+            return resolvedValue != null ? resolvedValue : valueToLocalize;
+        }
+        return valueToLocalize;
+    }
+    
     private static <S, T> T valueOrNull(final S object, final Function<S, T> fn) {
         return nullSafe(fn).apply(object);
     }
