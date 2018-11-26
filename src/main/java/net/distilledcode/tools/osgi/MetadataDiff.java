@@ -38,8 +38,12 @@ public class MetadataDiff {
         PrintingVisitor visitor = new PrintingVisitor(out);
 
         for (final String className : allClasses) {
-            Comparison comparison = Comparison.create(className, leftBundleMetadata, rightBundleMetadata);
-            comparison.visit(visitor);
+            try {
+                Comparison comparison = Comparison.create(className, leftBundleMetadata, rightBundleMetadata);
+                comparison.visit(visitor);
+            } catch (Exception e) {
+                throw new IOException("Could not diff metadata for class '" + className + "'", e);
+            }
         }
 
         if (!visitor.hasPrintedSomething()) {
