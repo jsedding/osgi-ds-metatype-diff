@@ -15,7 +15,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 
-public class BundleInvocationHandlerTest {
+public class InvocationHandlersTest {
 
     public static final String BUNDLE_FILE_NAME = "oak-core-1.7.8.jar";
 
@@ -26,7 +26,7 @@ public class BundleInvocationHandlerTest {
     @Before
     public void setUp() throws IOException, URISyntaxException {
         JarFile jarFile = TestUtil.getJarFile(BUNDLE_FILE_NAME);
-        bundle = BundleInvocationHandler.getJarFileAsBundle(jarFile);
+        bundle = InvocationHandlers.getJarFileAsBundle(jarFile);
     }
     
     @Test

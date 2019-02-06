@@ -1,13 +1,15 @@
 package net.distilledcode.tools.osgi;
 
 
-import org.apache.felix.scr.impl.metadata.ComponentMetadata;
+import org.apache.felix.scr.impl.logger.BundleLogger;
+import org.apache.felix.scr.impl.logger.ScrLogger;
+import org.osgi.framework.BundleContext;
 import org.osgi.service.log.LogService;
 import org.slf4j.Logger;
 
 import java.text.MessageFormat;
 
-public class SCRLogger implements org.apache.felix.scr.impl.helper.Logger {
+public class SCRLogger extends BundleLogger {
 
     private final Logger log;
 
@@ -19,8 +21,8 @@ public class SCRLogger implements org.apache.felix.scr.impl.helper.Logger {
             }
 
             @Override
-            public void log(final Logger logger, final String pattern, final Object... arguments) {
-                logger.debug(pattern, arguments);
+            public void log(final Logger logger, final String message, final Throwable throwable) {
+                logger.debug(message, throwable);
             }
         },
         INFO(LogService.LOG_INFO) {
@@ -30,8 +32,8 @@ public class SCRLogger implements org.apache.felix.scr.impl.helper.Logger {
             }
 
             @Override
-            public void log(final Logger logger, final String pattern, final Object... arguments) {
-                logger.info(pattern, arguments);
+            public void log(final Logger logger, final String message, final Throwable throwable) {
+                logger.info(message, throwable);
             }
         },
         WARN(LogService.LOG_WARNING) {
@@ -41,8 +43,8 @@ public class SCRLogger implements org.apache.felix.scr.impl.helper.Logger {
             }
 
             @Override
-            public void log(final Logger logger, final String pattern, final Object... arguments) {
-                logger.warn(pattern, arguments);
+            public void log(final Logger logger, final String message, final Throwable throwable) {
+                logger.warn(message, throwable);
             }
         },
         ERROR(LogService.LOG_ERROR) {
@@ -52,8 +54,8 @@ public class SCRLogger implements org.apache.felix.scr.impl.helper.Logger {
             }
 
             @Override
-            public void log(final Logger logger, final String pattern, final Object... arguments) {
-                logger.error(pattern, arguments);
+            public void log(final Logger logger, final String message, final Throwable throwable) {
+                logger.error(message, throwable);
             }
         };
 
@@ -74,29 +76,36 @@ public class SCRLogger implements org.apache.felix.scr.impl.helper.Logger {
 
         public abstract boolean isEnabled(final Logger logger);
 
-        public abstract void log(final Logger logger, final String pattern, final Object... arguments);
+        public abstract void log(final Logger logger, final String message, final Throwable throwable);
     }
 
 
-    SCRLogger(final Logger log) {
+    SCRLogger(final Logger log, final BundleContext bc) {
+        super(bc, new ScrLogger(null, bc));
         this.log = log;
+    }
+
+    @Override
+    public boolean log(int level, String message, Throwable ex) {
+        if (!isLogEnabled(level)) {
+            return false;
+        }
+        LevelLogger.byLevel(level).log(log, message, ex);
+        return true;
+    }
+
+    @Override
+    public boolean log(int level, String pattern, Throwable ex, Object... arguments) {
+        if (!isLogEnabled(level)) {
+            return false;
+        }
+
+        final String message = MessageFormat.format(pattern, arguments);
+        return log(level, message, ex);
     }
 
     @Override
     public boolean isLogEnabled(final int level) {
         return LevelLogger.byLevel(level).isEnabled(log);
-    }
-
-    @Override
-    public void log(final int level, final String pattern, final Object[] arguments, final ComponentMetadata metadata, final Long componentId, final Throwable ex) {
-        if (isLogEnabled(level)) {
-            final String message = MessageFormat.format(pattern, arguments);
-            log(level, message, metadata, componentId, ex );
-        }
-    }
-
-    @Override
-    public void log(final int level, final String message, final ComponentMetadata metadata, final Long componentId, final Throwable ex) {
-        LevelLogger.byLevel(level).log(log,"[{}({})]{}", metadata.getName(), componentId, message, ex);
     }
 }

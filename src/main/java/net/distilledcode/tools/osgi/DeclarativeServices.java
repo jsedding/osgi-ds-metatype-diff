@@ -3,6 +3,8 @@ package net.distilledcode.tools.osgi;
 import org.apache.felix.scr.impl.metadata.ComponentMetadata;
 import org.apache.felix.scr.impl.parser.KXml2SAXParser;
 import org.apache.felix.scr.impl.xml.XmlHandler;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,12 +23,11 @@ import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static net.distilledcode.tools.osgi.BundleInvocationHandler.getJarFileAsBundle;
+import static net.distilledcode.tools.osgi.InvocationHandlers.getJarFileAsBundle;
 
 public class DeclarativeServices {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeclarativeServices.class);
-    public static final SCRLogger SCR_LOGGER = new SCRLogger(LOG);
 
     private static final String SERVICE_COMPONENT = "Service-Component";
 
@@ -36,7 +37,7 @@ public class DeclarativeServices {
                 .map(jarFile::getJarEntry)
                 .map(toComponentMetadata(jarFile))
                 .flatMap(Collection::stream)
-                .peek(m -> m.validate(SCR_LOGGER))
+                .peek(ComponentMetadata::validate)
                 .flatMap(component -> generateNames(component).map(p -> new AbstractMap.SimpleEntry<>(p, component)))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
@@ -45,9 +46,11 @@ public class DeclarativeServices {
         return zipEntry -> {
             try (InputStream inputStream = jarFile.getInputStream(zipEntry)) {
                 BufferedReader in = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
+                Bundle bundle = getJarFileAsBundle(jarFile);
+                BundleContext bundleContext = bundle.getBundleContext();
                 XmlHandler handler = new XmlHandler(
-                        getJarFileAsBundle(jarFile),
-                        SCR_LOGGER,
+                        bundle,
+                        new SCRLogger(LOG, bundleContext),
                         false,
                         false);
                 KXml2SAXParser parser;
