@@ -2,6 +2,8 @@ package net.distilledcode.tools.osgi;
 
 import org.apache.felix.metatype.MetaData;
 import org.apache.felix.scr.impl.metadata.ComponentMetadata;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -15,6 +17,8 @@ import static net.distilledcode.tools.osgi.MetaType.readLocalizationProperties;
 import static net.distilledcode.tools.osgi.MetaType.readMetaData;
 
 public class MetadataDiff {
+
+    private static final Logger LOG = LoggerFactory.getLogger(MetadataDiff.class);
 
     public static void main(String[] args) throws IOException {
         if (args.length != 2) {
@@ -44,7 +48,8 @@ public class MetadataDiff {
                 Comparison comparison = Comparison.create(className, leftBundleMetadata, rightBundleMetadata);
                 comparison.visit(visitor);
             } catch (Exception e) {
-                throw new IOException("Could not diff metadata for class '" + className + "'", e);
+                LOG.error("Could not diff metadata for class '", e);
+                //throw new IOException("Could not diff metadata for class '" + className + "'", e);
             }
         }
 

@@ -61,22 +61,27 @@ public class Comparison {
     public void visit(Visitor visitor) {
         visitor.enter(className);
         visitDS(visitor);
-        visitMetaType(visitor);
+        visitMetaType(visitor, className);
         visitor.leave(className);
     }
 
-    private void visitMetaType(final Visitor visitor) {
+    private void visitMetaType(final Visitor visitor, String pid) {
         visitor.enter("MetaType");
         visitMetaTypeAttributes(visitor, leftMT, rightMT);
         visitAsMap(visitor, "Designates", leftMT, rightMT,
-                Comparison.<MetaData, List<Designate>>tryAll(MetaData::getDesignates, m -> Collections.emptyList())
-                    .andThen(fromCollectionToMap(tryAll(Designate::getPid, Designate::getFactoryPid))),
+                getDesignatesForPid(pid).andThen(fromCollectionToMap(MetaType::getDesignatePidOrFactoryPid)),
                 Comparison::visitDesignate);
         visitAsMap(visitor, "ObjectClassDefinitions", leftMT, rightMT,
-                Comparison::toOCDMap,
+                Comparison.toOCDMap(pid),
                 visitOCD());
         visitor.leave("MetaType");
+    }
 
+    @SuppressWarnings("unchecked")
+    private static Function<MetaData, List<Designate>> getDesignatesForPid(String pid) {
+        return metaData -> MetaType.designatesStream(metaData)
+                .filter(d -> MetaType.getDesignatePidOrFactoryPid(d).equals(pid))
+                .collect(Collectors.toList());
     }
 
     private static void visitMetaTypeAttributes(final Visitor visitor, final MetaData leftMT, final MetaData rightMT) {
@@ -98,17 +103,19 @@ public class Comparison {
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<String, OCD> toOCDMap(MetaData metaData) {
-        Map<String, OCD> ocds = metaData.getObjectClassDefinitions();
-        // if OCDs without AD children in metatype < 1.3 then ocds = null
-        if (ocds == null) {
-            return Collections.emptyMap();
-        }
-        List<Designate> designates = metaData.getDesignates();
-        Stream<Designate> stream = designates == null ? Stream.empty() : designates.stream();
-        Function<Designate, String> designateStringFunction = d -> d.getObject().getOcdRef();
-        Map<String, String> ocdRefToImplClass = stream.collect(Collectors.toMap(designateStringFunction, tryAll(Designate::getPid, Designate::getFactoryPid)));
-        return fromCollectionToMap((Function<OCD, String>) ocd -> ocdRefToImplClass.get(ocd.getID())).apply(ocds.values());
+    private static Function<MetaData, Map<String, OCD>> toOCDMap(String pid) {
+        return metaData -> {
+            List<Designate> designates = getDesignatesForPid(pid).apply(metaData);
+            Map<String, OCD> ocds = metaData.getObjectClassDefinitions();
+            // if OCDs without AD children in metatype < 1.3 then ocds = null
+            if (ocds == null) {
+                return Collections.emptyMap();
+            }
+            Function<Designate, String> toOcdRef = d -> d.getObject().getOcdRef();
+            Map<String, String> ocdRefToPid = designates.stream()
+                .collect(Collectors.toMap(toOcdRef, MetaType::getDesignatePidOrFactoryPid));
+            return fromCollectionToMap((Function<OCD, String>) ocd -> ocdRefToPid.get(ocd.getID())).apply(ocds.values());
+        };
     }
 
     @SuppressWarnings("unchecked")
