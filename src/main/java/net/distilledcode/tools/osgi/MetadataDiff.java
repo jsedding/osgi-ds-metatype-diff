@@ -48,8 +48,7 @@ public class MetadataDiff {
                 Comparison comparison = Comparison.create(className, leftBundleMetadata, rightBundleMetadata);
                 comparison.visit(visitor);
             } catch (Exception e) {
-                LOG.error("Could not diff metadata for class '", e);
-                //throw new IOException("Could not diff metadata for class '" + className + "'", e);
+                LOG.warn("Could not diff metadata for class '{}'", className, e);
             }
         }
 

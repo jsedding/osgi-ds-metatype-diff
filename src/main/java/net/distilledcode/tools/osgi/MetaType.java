@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
@@ -15,14 +16,21 @@ import java.util.stream.Stream;
 import org.apache.felix.metatype.Designate;
 import org.apache.felix.metatype.MetaData;
 import org.apache.felix.metatype.MetaDataReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.CheckForNull;
 
 public class MetaType {
+
+    private static final Logger LOG = LoggerFactory.getLogger(MetaType.class);
 
     private static MetaDataReader metaDataReader = new MetaDataReader();
 
     public static Map<String, MetaData> readMetaData(final JarFile jarFile) {
         return findEntries(jarFile, "OSGI-INF/metatype", "xml")
                 .map(toMetaData(jarFile, metaDataReader))
+                .filter(Predicate.isEqual(null).negate())
                 .flatMap(metaData -> designatesStream(metaData)
                            .map(MetaType::getDesignatePidOrFactoryPid)
                            .map(pid -> new SimpleEntry<>(pid, metaData)))
@@ -47,12 +55,14 @@ public class MetaType {
         return  metaDataMap.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, getProperties(jarFile)));
     }
 
+    @CheckForNull
     private static Function<JarEntry, MetaData> toMetaData(final JarFile jarFile, MetaDataReader metaDataReader) {
         return jarEntry -> {
             try (InputStream inputStream = jarFile.getInputStream(jarEntry)) {
                 return metaDataReader.parse(inputStream);
             } catch (IOException e) {
-                throw new RuntimeException("Error handling " + jarEntry.getName() + " in '" + jarFile.getName() + "'", e);
+                LOG.warn("Error parsing '{}' in '{}'", jarEntry.getName(), jarFile.getName(), e);
+                return null;
             }
         };
     }

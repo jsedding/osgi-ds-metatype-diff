@@ -8,6 +8,7 @@ import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.CheckForNull;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,6 +19,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
@@ -36,15 +38,17 @@ public class DeclarativeServices {
         return Arrays.stream(serviceComponents.split(","))
                 .map(jarFile::getJarEntry)
                 .map(toComponentMetadata(jarFile))
+                .filter(Predicate.isEqual(null).negate())
                 .flatMap(Collection::stream)
                 .peek(ComponentMetadata::validate)
                 .flatMap(component -> generateNames(component).map(p -> new AbstractMap.SimpleEntry<>(p, component)))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
+    @CheckForNull
     private static Function<JarEntry, List<ComponentMetadata>> toComponentMetadata(final JarFile jarFile) {
-        return zipEntry -> {
-            try (InputStream inputStream = jarFile.getInputStream(zipEntry)) {
+        return jarEntry -> {
+            try (InputStream inputStream = jarFile.getInputStream(jarEntry)) {
                 BufferedReader in = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
                 Bundle bundle = getJarFileAsBundle(jarFile);
                 BundleContext bundleContext = bundle.getBundleContext();
@@ -53,13 +57,11 @@ public class DeclarativeServices {
                         new SCRLogger(LOG, bundleContext),
                         false,
                         false);
-                KXml2SAXParser parser;
-
-                parser = new KXml2SAXParser(in);
-                parser.parseXML(handler);
+                new KXml2SAXParser(in).parseXML(handler);
                 return handler.getComponentMetadataList();
             } catch (Exception e) {
-                throw new RuntimeException("Error while parsing '" + zipEntry.getName() + "' in '" + jarFile.getName() + "'", e);
+                LOG.warn("Error parsing '{}' in '{}'", jarEntry.getName(), jarFile.getName(), e);
+                return null;
             }
         };
     }
