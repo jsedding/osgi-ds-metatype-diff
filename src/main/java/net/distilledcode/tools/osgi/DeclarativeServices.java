@@ -16,12 +16,14 @@ import java.io.InputStreamReader;
 import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -34,7 +36,15 @@ public class DeclarativeServices {
     private static final String SERVICE_COMPONENT = "Service-Component";
 
     public static Map<String, ComponentMetadata> readComponentMetadata(JarFile jarFile) throws IOException {
-        String serviceComponents = jarFile.getManifest().getMainAttributes().getValue(SERVICE_COMPONENT);
+        Manifest manifest = jarFile.getManifest();
+        if (manifest == null) {
+            throw new IOException("Jar at " + jarFile.getName() + " does not contain the mandatory manifest file");
+        }
+        String serviceComponents = manifest.getMainAttributes().getValue(SERVICE_COMPONENT);
+        if (serviceComponents == null) {
+            LOG.warn("The bundle '{}' does not contain a 'Service-Component' header in its manifest. Therefore no comparison can be performed.", jarFile.getName());
+            return Collections.emptyMap();
+        }
         return Arrays.stream(serviceComponents.split(","))
                 .map(jarFile::getJarEntry)
                 .map(toComponentMetadata(jarFile))
