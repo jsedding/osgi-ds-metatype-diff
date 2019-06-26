@@ -6,6 +6,7 @@ import org.apache.felix.metatype.MetaData;
 import org.apache.felix.metatype.OCD;
 import org.apache.felix.scr.impl.metadata.ComponentMetadata;
 import org.apache.felix.scr.impl.metadata.ReferenceMetadata;
+import org.apache.felix.scr.impl.metadata.ServiceMetadata;
 
 import javax.annotation.Nonnull;
 import java.beans.Introspector;
@@ -160,10 +161,12 @@ public class Comparison {
         visitor.enter("Declarative Services");
         visitDSAttributes(visitor, leftDS, rightDS);
         visitAsMap(visitor, "Properties", leftDS, rightDS, ComponentMetadata::getProperties, Comparison::visitValue);
+        visitDSService(visitor, leftDS.getServiceMetadata(), rightDS.getServiceMetadata());
         visitAsMap(visitor, "References", leftDS, rightDS,
                 Comparison.<ComponentMetadata, List<ReferenceMetadata>>tryAll(ComponentMetadata::getDependencies, m -> Collections.emptyList())
                         .andThen(fromCollectionToMap(rm -> Introspector.decapitalize(rm.getName()))),
                 Comparison::visitDSReference);
+        visitDSImplementation(visitor, leftDS, rightDS);
         visitor.leave("Declarative Services");
     }
 
@@ -196,6 +199,19 @@ public class Comparison {
         visitor.leave(name);
     }
 
+    private void visitDSService(final Visitor visitor, final ServiceMetadata left, final ServiceMetadata right) {
+        visitor.enter("Service");
+        visitValue(visitor, "scope", ServiceMetadata::getScope, left, right);
+        visitValue(visitor, "interface", ServiceMetadata::getProvides, left, right);
+        visitor.leave("Service");
+    }
+
+    private void visitDSImplementation(final Visitor visitor, final ComponentMetadata leftDS, final ComponentMetadata rightDS) {
+        visitor.enter("Implementation");
+        visitValue(visitor, "class", ComponentMetadata::getImplementationClassName, leftDS, rightDS);
+        visitor.leave("Implementation");
+    }
+    
     private <S> void visitLocalizedValues(final Visitor visitor, String name, final Function<S, String[]> fn, final S left, final S right) {
         visitValue(visitor, name, localizedValuesOrNull(left, fn, leftMTLocalizationProperties), localizedValuesOrNull(right, fn, rightMTLocalizationProperties));
     }
