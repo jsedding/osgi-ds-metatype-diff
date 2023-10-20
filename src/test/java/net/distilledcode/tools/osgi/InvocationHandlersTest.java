@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.osgi.framework.Bundle;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -31,7 +32,7 @@ public class InvocationHandlersTest {
     
     @Test
     public void getLocation() throws Exception {
-        assertThat("getLocation", bundle.getLocation(), endsWith(BUNDLE_RELATIVE_PATH));
+        assertThat("getLocation", bundle.getLocation().replace(File.separatorChar, '/'), endsWith(BUNDLE_RELATIVE_PATH));
     }
 
     @Test
