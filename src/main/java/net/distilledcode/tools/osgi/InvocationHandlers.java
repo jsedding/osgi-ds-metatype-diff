@@ -75,7 +75,7 @@ public class InvocationHandlers {
     // this object implements selected Bundle methods
     private static class BundleImplementedMethods extends ImplementedMethods<Bundle> {
 
-        private JarFile jarFile;
+        private final JarFile jarFile;
 
         private final URL jarFileUrl;
 
@@ -124,7 +124,7 @@ public class InvocationHandlers {
     // this object implements selected BundleContext methods
     private static class BundleContextImplementedMethods extends ImplementedMethods<BundleContext> {
 
-        private Bundle bundle;
+        private final Bundle bundle;
 
         BundleContextImplementedMethods(final Bundle bundle) {
             super(BundleContext.class);
@@ -143,7 +143,7 @@ public class InvocationHandlers {
 
         }
 
-        ServiceReference[] getServiceReferences(String a, String b) {
+        ServiceReference<?>[] getServiceReferences(String clazz, String filter) {
             return null;
         }
     }
