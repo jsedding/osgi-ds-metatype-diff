@@ -6,6 +6,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.jar.JarEntry;
@@ -84,14 +85,14 @@ public class InvocationHandlers {
         BundleImplementedMethods(final JarFile jarFile) throws MalformedURLException {
             super(Bundle.class);
             this.jarFile = jarFile;
-            this.jarFileUrl = new URL("file:" + jarFile.getName());
+            this.jarFileUrl = URI.create("file:" + jarFile.getName()).toURL();
         }
 
         URL getEntry(String path) {
             try {
                 JarEntry jarEntry = jarFile.getJarEntry(path);
                 if (jarEntry != null) {
-                    return new URL("jar:" + jarFileUrl + "!/" + path);
+                    return URI.create("jar:" + jarFileUrl + "!/" + path).toURL();
                 }
                 return null;
             } catch (MalformedURLException e) {
