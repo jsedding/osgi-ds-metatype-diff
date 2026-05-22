@@ -24,6 +24,13 @@
         <url>http://code-distillery.net</url>
     </organization>
 
+    <scm>
+        <connection>scm:git:https://github.com/jsedding/osgi-ds-metatype-diff.git</connection>
+        <developerConnection>scm:git:git@github.com:jsedding/osgi-ds-metatype-diff.git</developerConnection>
+        <url>https://github.com/jsedding/osgi-ds-metatype-diff</url>
+        <tag>HEAD</tag>
+    </scm>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
