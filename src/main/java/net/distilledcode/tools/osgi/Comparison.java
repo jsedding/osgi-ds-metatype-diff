@@ -161,7 +161,7 @@ public class Comparison {
         visitor.enter("Declarative Services");
         visitDSAttributes(visitor, leftDS, rightDS);
         visitAsMap(visitor, "Properties", leftDS, rightDS, ComponentMetadata::getProperties, Comparison::visitValue);
-        visitDSService(visitor, leftDS.getServiceMetadata(), rightDS.getServiceMetadata());
+        visitDSService(visitor, valueOrNull(leftDS, ComponentMetadata::getServiceMetadata), valueOrNull(rightDS, ComponentMetadata::getServiceMetadata));
         visitAsMap(visitor, "References", leftDS, rightDS,
                 Comparison.<ComponentMetadata, List<ReferenceMetadata>>tryAll(ComponentMetadata::getDependencies, m -> Collections.emptyList())
                         .andThen(fromCollectionToMap(rm -> Introspector.decapitalize(rm.getName()))),
