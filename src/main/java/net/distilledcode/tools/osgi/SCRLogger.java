@@ -2,19 +2,19 @@ package net.distilledcode.tools.osgi;
 
 
 import org.apache.felix.scr.impl.logger.BundleLogger;
-import org.apache.felix.scr.impl.logger.ScrLogger;
-import org.osgi.framework.BundleContext;
-import org.osgi.service.log.LogService;
+import org.apache.felix.scr.impl.logger.ComponentLogger;
+import org.osgi.framework.Bundle;
 import org.slf4j.Logger;
 
 import java.text.MessageFormat;
+import java.util.function.Supplier;
 
-public class SCRLogger extends BundleLogger {
+public class SCRLogger implements BundleLogger, ComponentLogger {
 
     private final Logger log;
 
     private enum LevelLogger {
-        DEBUG(LogService.LOG_DEBUG) {
+        DEBUG(Level.DEBUG) {
             @Override
             public boolean isEnabled(final Logger logger) {
                 return logger.isDebugEnabled();
@@ -25,7 +25,7 @@ public class SCRLogger extends BundleLogger {
                 logger.debug(message, throwable);
             }
         },
-        INFO(LogService.LOG_INFO) {
+        INFO(Level.INFO) {
             @Override
             public boolean isEnabled(final Logger logger) {
                 return logger.isInfoEnabled();
@@ -36,7 +36,7 @@ public class SCRLogger extends BundleLogger {
                 logger.info(message, throwable);
             }
         },
-        WARN(LogService.LOG_WARNING) {
+        WARN(Level.WARN) {
             @Override
             public boolean isEnabled(final Logger logger) {
                 return logger.isWarnEnabled();
@@ -47,7 +47,7 @@ public class SCRLogger extends BundleLogger {
                 logger.warn(message, throwable);
             }
         },
-        ERROR(LogService.LOG_ERROR) {
+        ERROR(Level.ERROR) {
             @Override
             public boolean isEnabled(final Logger logger) {
                 return logger.isErrorEnabled();
@@ -59,13 +59,13 @@ public class SCRLogger extends BundleLogger {
             }
         };
 
-        private final int lvl;
+        private final Level lvl;
 
-        LevelLogger(int lvl) {
+        LevelLogger(Level lvl) {
             this.lvl = lvl;
         }
 
-        static LevelLogger byLevel(int lvl) {
+        static LevelLogger byLevel(Level lvl) {
             for (final LevelLogger levelLogger : values()) {
                 if (levelLogger.lvl == lvl) {
                     return levelLogger;
@@ -80,32 +80,39 @@ public class SCRLogger extends BundleLogger {
     }
 
 
-    SCRLogger(final Logger log, final BundleContext bc) {
-        super(bc, new ScrLogger(null, bc));
+    SCRLogger(final Logger log) {
         this.log = log;
     }
 
     @Override
-    public boolean log(int level, String message, Throwable ex) {
-        if (!isLogEnabled(level)) {
-            return false;
+    public void log(Level level, String message, Throwable ex) {
+        doLog(LevelLogger.byLevel(level), log, () -> message, ex);
+    }
+
+    private void doLog(LevelLogger levelLogger, Logger log, Supplier<String> message, Throwable ex) {
+        if (levelLogger.isEnabled(log)) {
+            levelLogger.log(log, message.get(), ex);
         }
-        LevelLogger.byLevel(level).log(log, message, ex);
-        return true;
     }
 
     @Override
-    public boolean log(int level, String pattern, Throwable ex, Object... arguments) {
-        if (!isLogEnabled(level)) {
-            return false;
-        }
-
-        final String message = MessageFormat.format(pattern, arguments);
-        return log(level, message, ex);
+    public void log(Level level, String pattern, Throwable ex, Object... arguments) {
+        doLog(LevelLogger.byLevel(level), log, () -> MessageFormat.format(pattern, arguments), ex);
     }
 
     @Override
-    public boolean isLogEnabled(final int level) {
+    public boolean isLogEnabled(final Level level) {
         return LevelLogger.byLevel(level).isEnabled(log);
+    }
+
+
+    @Override
+    public ComponentLogger component(Bundle m_bundle, String implementationClassName, String name) {
+        return this;
+    }
+
+    @Override
+    public void setComponentId(long m_componentId) {
+
     }
 }

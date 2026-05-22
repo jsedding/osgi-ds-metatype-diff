@@ -195,7 +195,7 @@ public class Comparison {
         visitValue(visitor, "updated", ReferenceMetadata::getUpdated, left, right);
         visitValue(visitor, "field", ReferenceMetadata::getField, left, right);
         visitValue(visitor, "field-option", ReferenceMetadata::getFieldOption, left, right);
-        visitValue(visitor, "field-collection", ReferenceMetadata::getFieldCollectionType, left, right);
+        visitValue(visitor, "field-collection-type", ReferenceMetadata::getCollectionType, left, right);
         visitor.leave(name);
     }
 
